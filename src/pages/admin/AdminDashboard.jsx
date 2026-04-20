@@ -46,7 +46,7 @@ export default function AdminDashboard() {
     { label: 'Supabase Database', ok: true, action: null },
     { label: 'Netlify Deploy', ok: true, action: null },
     { label: 'Mapbox (Mapa)', ok: true, action: null },
-    { label: 'Evolution API (WhatsApp)', ok: false, action: 'Configurar EVOLUTION_API_URL no .env' },
+    { label: 'Z-API (WhatsApp)', ok: true, action: null },
     { label: 'Asaas (Pagamentos)', ok: false, action: 'Criar conta em asaas.com e adicionar ASAAS_API_KEY' },
     { label: 'Resend (Email)', ok: false, action: 'Gerar nova chave em resend.com/api-keys' },
     { label: 'OneSignal (Push)', ok: false, action: 'Criar app em onesignal.com' },
