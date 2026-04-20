@@ -7,6 +7,7 @@ import Home from './pages/consumer/Home'
 import Busca from './pages/consumer/Busca'
 import LojaProfile from './pages/consumer/LojaProfile'
 import Login from './pages/lojista/Login'
+import Cadastro from './pages/lojista/Cadastro'
 import Dashboard from './pages/lojista/Dashboard'
 import Produtos from './pages/lojista/Produtos'
 import MeuPerfil from './pages/lojista/MeuPerfil'
@@ -30,6 +31,7 @@ export default function App() {
 
         {/* Área do lojista */}
         <Route path="/lojista/login" element={<Login />} />
+        <Route path="/lojista/cadastro" element={<Cadastro />} />
         <Route path="/lojista" element={<LojistaShell />}>
           <Route index element={<Dashboard />} />
           <Route path="produtos" element={<Produtos />} />

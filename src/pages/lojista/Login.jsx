@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { MapPin, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -114,7 +114,7 @@ export default function Login() {
 
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: '.85rem', color: 'var(--slate-500)' }}>Ainda não tem conta? </span>
-          <a href="#" style={{ fontSize: '.85rem', color: 'var(--green)', fontWeight: 700 }}>Cadastrar minha loja</a>
+          <Link to="/lojista/cadastro" style={{ fontSize: '.85rem', color: 'var(--green)', fontWeight: 700 }}>Cadastrar minha loja</Link>
         </div>
 
         <button
