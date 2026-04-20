@@ -6,6 +6,8 @@ import AdminShell from './components/AdminShell'
 import Home from './pages/consumer/Home'
 import Busca from './pages/consumer/Busca'
 import LojaProfile from './pages/consumer/LojaProfile'
+import Mapa from './pages/consumer/Mapa'
+import Conta from './pages/consumer/Conta'
 import Login from './pages/lojista/Login'
 import Cadastro from './pages/lojista/Cadastro'
 import Dashboard from './pages/lojista/Dashboard'
@@ -27,6 +29,8 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="busca" element={<Busca />} />
           <Route path="loja/:id" element={<LojaProfile />} />
+          <Route path="mapa" element={<Mapa />} />
+          <Route path="conta" element={<Conta />} />
         </Route>
 
         {/* Área do lojista */}
