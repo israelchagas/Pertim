@@ -1,51 +1,112 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Eye, MessageCircle, TrendingUp, Bell, ChevronRight, Package } from 'lucide-react'
+import { Plus, Eye, MessageCircle, Bell, ChevronRight, Package, LogIn } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 import { LOJAS } from '../../lib/mockData'
-
-const LOJA_DEMO = LOJAS[0]
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [user, setUser] = useState(null)
+  const [loja, setLoja] = useState(LOJAS[0])
+  const [lojaId, setLojaId] = useState(null)
   const [aberta, setAberta] = useState(true)
   const [toast, setToast] = useState('')
-  const [loja] = useState(LOJA_DEMO)
+  const [demoMode, setDemoMode] = useState(false)
+  const [stats, setStats] = useState({ views: 0, whatsapp: 0 })
 
-  const toggleAberta = () => {
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { setDemoMode(true); return }
+
+      setUser(session.user)
+      supabase
+        .from('lojas')
+        .select('*, categorias(*), produtos(*)')
+        .eq('user_id', session.user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setLojaId(data.id)
+            setAberta(data.aberta ?? false)
+            setLoja({
+              ...LOJAS[0],
+              id: data.id,
+              nome: data.nome,
+              whatsapp: data.whatsapp,
+              produtos: (data.produtos || []).map(p => ({
+                id: p.id, nome: p.nome, preco: p.preco || 0,
+                emoji: p.emoji || '🛍️', disponivel: p.disponivel ?? true,
+              })),
+            })
+            setStats({ views: data.visualizacoes || 0, whatsapp: data.cliques_whatsapp || 0 })
+          } else {
+            setDemoMode(true)
+          }
+        })
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+  }, [])
+
+  const toggleAberta = async () => {
     const novoStatus = !aberta
     setAberta(novoStatus)
-    setToast(novoStatus ? '✅ Loja marcada como ABERTA' : '🔴 Loja marcada como FECHADA')
-    setTimeout(() => setToast(''), 2500)
+    showToast(novoStatus ? '✅ Loja marcada como ABERTA' : '🔴 Loja marcada como FECHADA')
+
+    if (lojaId) {
+      const { error } = await supabase.from('lojas').update({ aberta: novoStatus }).eq('id', lojaId)
+      if (error) { setAberta(!novoStatus); showToast('❌ Erro ao atualizar status') }
+    }
   }
+
+  const primeiroNome = loja.nome.split(' ')[0] || 'lojista'
 
   return (
     <>
-      {/* Toast */}
       {toast && <div className="toast">{toast}</div>}
 
       {/* Header */}
       <div style={{ background: 'var(--white)', borderBottom: '1px solid var(--slate-200)', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: '1.05rem', fontWeight: 900 }}>Pertim<span style={{ color: 'var(--green)' }}>.</span></div>
-          <div style={{ fontSize: '.72rem', color: 'var(--slate-400)' }}>Painel do lojista</div>
+          <div style={{ fontSize: '.68rem', color: 'var(--slate-400)', fontWeight: 500 }}>
+            {demoMode ? '⚡ Modo demo — ' : ''}Painel do lojista
+          </div>
         </div>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)' }}>
-          <Bell size={22} />
-        </button>
+        {demoMode ? (
+          <button className="btn btn-green btn-sm" onClick={() => navigate('/lojista/login')}>
+            <LogIn size={15} /> Entrar
+          </button>
+        ) : (
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)' }}>
+            <Bell size={22} />
+          </button>
+        )}
       </div>
+
+      {/* Banner demo */}
+      {demoMode && (
+        <div style={{ background: 'var(--amber-light)', border: '1px solid rgba(245,158,11,.3)', margin: '12px 16px', borderRadius: 'var(--r-md)', padding: '12px 16px', fontSize: '.82rem', color: '#92400e', fontWeight: 600 }}>
+          ⚡ Você está em modo demo. <a onClick={() => navigate('/lojista/login')} style={{ color: 'var(--amber)', cursor: 'pointer', textDecoration: 'underline' }}>Faça login</a> para gerenciar sua loja real.
+        </div>
+      )}
 
       {/* Saudação */}
       <div className="merchant-greeting">
-        <h2>Olá, {loja.nome.split(' ')[0]}! 👋</h2>
+        <h2>Olá, {primeiroNome}! 👋</h2>
         <p>Hoje é um ótimo dia para vender.</p>
       </div>
 
-      {/* Toggle principal — OPEN/CLOSE */}
+      {/* Toggle ABERTA/FECHADA — ação principal */}
       <div style={{ padding: '0 16px', marginBottom: 16 }}>
         <button
           className={`merchant-toggle ${aberta ? 'open' : ''}`}
           onClick={toggleAberta}
-          style={{ width: '100%', textAlign: 'center', fontFamily: 'inherit' }}
+          style={{ width: '100%', fontFamily: 'inherit' }}
         >
           <div className="toggle-label">Status da loja agora</div>
           <div className="toggle-status">
@@ -54,7 +115,7 @@ export default function Dashboard() {
           <div className={`toggle-switch ${aberta ? 'on' : ''}`}>
             <div className="toggle-thumb" />
           </div>
-          <div style={{ fontSize: '.75rem', color: aberta ? 'var(--green-dark)' : 'var(--slate-400)', marginTop: 10, fontWeight: 600 }}>
+          <div style={{ fontSize: '.72rem', color: aberta ? 'var(--green-dark)' : 'var(--slate-400)', marginTop: 10, fontWeight: 600 }}>
             {aberta ? 'Visível para todos os moradores do bairro' : 'Sua loja está oculta nos resultados'}
           </div>
         </button>
@@ -63,17 +124,13 @@ export default function Dashboard() {
       {/* Stats */}
       <div className="stats-row">
         <div className="stat-card">
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6, color: 'var(--green)' }}>
-            <Eye size={18} />
-          </div>
-          <div className="num">24</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6, color: 'var(--green)' }}><Eye size={18} /></div>
+          <div className="num">{stats.views || 24}</div>
           <div className="lbl">Visualizações hoje</div>
         </div>
         <div className="stat-card">
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6, color: '#25D366' }}>
-            <MessageCircle size={18} />
-          </div>
-          <div className="num">3</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6, color: '#25D366' }}><MessageCircle size={18} /></div>
+          <div className="num">{stats.whatsapp || 3}</div>
           <div className="lbl">Cliques WhatsApp hoje</div>
         </div>
       </div>
@@ -85,10 +142,10 @@ export default function Dashboard() {
       <div className="quick-actions">
         {[
           { icon: '📸', label: 'Add Produto', action: () => navigate('/lojista/produtos') },
-          { icon: '🕐', label: 'Horários', action: () => navigate('/lojista/perfil') },
-          { icon: '📊', label: 'Relatórios', action: () => {} },
-          { icon: '⭐', label: 'Upgrade', action: () => navigate('/lojista/plano') },
-          { icon: '🔗', label: 'Meu Link', action: () => {} },
+          { icon: '🕐', label: 'Horários',    action: () => navigate('/lojista/perfil') },
+          { icon: '👤', label: 'Meu Perfil',  action: () => navigate('/lojista/perfil') },
+          { icon: '⭐', label: 'Upgrade',     action: () => {} },
+          { icon: '🔗', label: 'Meu Link',    action: () => {} },
         ].map((a, i) => (
           <button key={i} className="quick-action" onClick={a.action}>
             <span className="qa-icon">{a.icon}</span>
@@ -105,57 +162,41 @@ export default function Dashboard() {
         </a>
       </div>
 
-      <div className="products-container">
+      <div className="products-container" style={{ margin: '0 16px' }}>
         {loja.produtos.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--slate-400)' }}>
-            <Package size={32} style={{ margin: '0 auto 12px', opacity: .4 }} />
-            <p style={{ fontSize: '.88rem' }}>Nenhum produto cadastrado ainda.</p>
+          <div style={{ padding: 28, textAlign: 'center', color: 'var(--slate-400)' }}>
+            <Package size={28} style={{ margin: '0 auto 10px', opacity: .4 }} />
+            <p style={{ fontSize: '.85rem' }}>Nenhum produto ainda.</p>
           </div>
         ) : (
-          loja.produtos.map((p, i) => (
-            <div key={p.id} className="product-card" style={{ borderBottom: i < loja.produtos.length - 1 ? '1px solid var(--slate-200)' : 'none' }}>
+          loja.produtos.slice(0, 4).map((p, i) => (
+            <div key={p.id} className="product-card" style={{ borderBottom: i < Math.min(loja.produtos.length, 4) - 1 ? '1px solid var(--slate-200)' : 'none' }}>
               <div className="product-emoji">{p.emoji}</div>
               <div className="product-info">
                 <div className="product-name">{p.nome}</div>
                 <div className="product-price">
-                  {p.preco > 0 ? p.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Preço não informado'}
+                  {p.preco > 0 ? p.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Sob consulta'}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: '.7rem', fontWeight: 700, color: p.disponivel ? 'var(--green-dark)' : 'var(--slate-400)', background: p.disponivel ? 'var(--green-light)' : 'var(--bg)', padding: '4px 10px', borderRadius: 'var(--r-full)' }}>
-                  {p.disponivel ? 'Disponível' : 'Indisponível'}
-                </span>
-              </div>
+              <span style={{ fontSize: '.68rem', fontWeight: 700, color: p.disponivel ? 'var(--green-dark)' : 'var(--slate-400)', background: p.disponivel ? 'var(--green-light)' : 'var(--bg)', padding: '3px 9px', borderRadius: 'var(--r-full)', flexShrink: 0 }}>
+                {p.disponivel ? 'Disponível' : 'Esgotado'}
+              </span>
             </div>
           ))
         )}
       </div>
 
-      {/* Banner plano */}
+      {/* Banner upgrade */}
       <div style={{ margin: '16px', background: 'var(--navy)', borderRadius: 'var(--r-lg)', padding: '20px', color: 'white', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 120, background: 'radial-gradient(circle at top right, rgba(16,185,129,.3) 0%, transparent 70%)' }} />
-        <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
-          Plano Vizinho (Grátis)
-        </div>
-        <div style={{ fontWeight: 800, fontSize: '.95rem', marginBottom: 8 }}>
-          Faça upgrade para o Plano Aberto
-        </div>
-        <div style={{ fontSize: '.8rem', color: 'rgba(255,255,255,.7)', marginBottom: 16 }}>
-          Apareça em destaque e receba 3x mais visualizações.
-        </div>
-        <button className="btn btn-green btn-sm">
-          Ver planos por R$29/mês →
-        </button>
+        <div style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Plano Vizinho (Grátis)</div>
+        <div style={{ fontWeight: 800, fontSize: '.92rem', marginBottom: 6 }}>Upgrade para o Plano Aberto</div>
+        <div style={{ fontSize: '.78rem', color: 'rgba(255,255,255,.65)', marginBottom: 14 }}>Apareça em destaque e receba 3x mais visualizações.</div>
+        <button className="btn btn-green btn-sm">Ver planos · R$29/mês →</button>
       </div>
 
       <div style={{ height: 16 }} />
-
-      {/* FAB */}
-      <button
-        className="fab"
-        onClick={() => navigate('/lojista/produtos')}
-        title="Adicionar produto"
-      >
+      <button className="fab" onClick={() => navigate('/lojista/produtos')} title="Adicionar produto">
         <Plus size={24} />
       </button>
     </>
