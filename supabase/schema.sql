@@ -113,6 +113,10 @@ ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "lojas_select_publico" ON lojas
   FOR SELECT USING (status = 'ativo');
 
+-- Dono pode sempre ler sua própria loja (mesmo pendente/inativa)
+CREATE POLICY "lojas_select_own" ON lojas
+  FOR SELECT USING (auth.uid() = user_id);
+
 CREATE POLICY "lojas_insert_own" ON lojas
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
