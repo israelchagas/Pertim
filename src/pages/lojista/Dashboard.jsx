@@ -125,12 +125,12 @@ export default function Dashboard() {
       <div className="stats-row">
         <div className="stat-card">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6, color: 'var(--green)' }}><Eye size={18} /></div>
-          <div className="num">{stats.views || 24}</div>
+          <div className="num">{stats.views}</div>
           <div className="lbl">Visualizações hoje</div>
         </div>
         <div className="stat-card">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6, color: '#25D366' }}><MessageCircle size={18} /></div>
-          <div className="num">{stats.whatsapp || 3}</div>
+          <div className="num">{stats.whatsapp}</div>
           <div className="lbl">Cliques WhatsApp hoje</div>
         </div>
       </div>
@@ -145,7 +145,10 @@ export default function Dashboard() {
           { icon: '🕐', label: 'Horários',    action: () => navigate('/lojista/perfil') },
           { icon: '👤', label: 'Meu Perfil',  action: () => navigate('/lojista/perfil') },
           { icon: '⭐', label: 'Upgrade',     action: () => {} },
-          { icon: '🔗', label: 'Meu Link',    action: () => {} },
+          { icon: '🔗', label: 'Meu Link',    action: () => {
+            const link = `https://pertim.online/app/loja/${lojaId}`
+            navigator.clipboard?.writeText(link).then(() => showToast('🔗 Link copiado!')).catch(() => showToast(link))
+          }},
         ].map((a, i) => (
           <button key={i} className="quick-action" onClick={a.action}>
             <span className="qa-icon">{a.icon}</span>
