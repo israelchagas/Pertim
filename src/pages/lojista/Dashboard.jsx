@@ -1,18 +1,40 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Eye, MessageCircle, Bell, ChevronRight, Package, LogIn } from 'lucide-react'
+import { Plus, Eye, MessageCircle, Bell, ChevronRight, Package, LogIn, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { LOJAS } from '../../lib/mockData'
+
+const PLANOS = [
+  {
+    slug: 'vizinho', nome: 'Vizinho', preco: 'Grátis',
+    cor: 'var(--slate-200)', corTexto: 'var(--slate-700)',
+    items: ['Perfil básico da loja', 'Até 10 produtos', 'Link compartilhável', 'Aparece na busca do bairro'],
+    acao: null,
+  },
+  {
+    slug: 'aberto', nome: 'Aberto', preco: 'R$29/mês',
+    cor: 'var(--green)', corTexto: 'white',
+    destaque: true,
+    items: ['Tudo do Vizinho', 'Destaque nos resultados', 'Produtos ilimitados', 'Estatísticas avançadas', 'Suporte prioritário'],
+    acao: 'https://wa.me/5561999999999?text=Quero+assinar+o+Plano+Aberto+do+Pertim',
+  },
+  {
+    slug: 'radar', nome: 'Radar', preco: 'R$79/mês',
+    cor: 'var(--navy)', corTexto: 'white',
+    items: ['Tudo do Aberto', 'Banner na tela inicial', 'Notificações push aos moradores', 'Relatórios semanais por WhatsApp'],
+    acao: 'https://wa.me/5561999999999?text=Quero+assinar+o+Plano+Radar+do+Pertim',
+  },
+]
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
-  const [loja, setLoja] = useState(LOJAS[0])
+  const [loja, setLoja] = useState({ nome: '', produtos: [] })
   const [lojaId, setLojaId] = useState(null)
-  const [aberta, setAberta] = useState(true)
+  const [aberta, setAberta] = useState(false)
   const [toast, setToast] = useState('')
   const [demoMode, setDemoMode] = useState(false)
   const [stats, setStats] = useState({ views: 0, whatsapp: 0 })
+  const [showUpgrade, setShowUpgrade] = useState(false)
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
 
@@ -31,10 +53,9 @@ export default function Dashboard() {
             setLojaId(data.id)
             setAberta(data.aberta ?? false)
             setLoja({
-              ...LOJAS[0],
               id: data.id,
-              nome: data.nome,
-              whatsapp: data.whatsapp,
+              nome: data.nome || '',
+              whatsapp: data.whatsapp || '',
               produtos: (data.produtos || []).map(p => ({
                 id: p.id, nome: p.nome, preco: p.preco || 0,
                 emoji: p.emoji || '🛍️', disponivel: p.disponivel ?? true,
@@ -63,7 +84,7 @@ export default function Dashboard() {
     }
   }
 
-  const primeiroNome = loja.nome.split(' ')[0] || 'lojista'
+  const primeiroNome = (loja.nome || '').split(' ')[0] || 'lojista'
 
   return (
     <>
@@ -144,7 +165,7 @@ export default function Dashboard() {
           { icon: '📸', label: 'Add Produto', action: () => navigate('/lojista/produtos') },
           { icon: '🕐', label: 'Horários',    action: () => navigate('/lojista/perfil') },
           { icon: '👤', label: 'Meu Perfil',  action: () => navigate('/lojista/perfil') },
-          { icon: '⭐', label: 'Upgrade',     action: () => {} },
+          { icon: '⭐', label: 'Upgrade',     action: () => setShowUpgrade(true) },
           { icon: '🔗', label: 'Meu Link',    action: () => {
             const link = `https://pertim.online/app/loja/${lojaId}`
             navigator.clipboard?.writeText(link).then(() => showToast('🔗 Link copiado!')).catch(() => showToast(link))
@@ -195,13 +216,62 @@ export default function Dashboard() {
         <div style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Plano Vizinho (Grátis)</div>
         <div style={{ fontWeight: 800, fontSize: '.92rem', marginBottom: 6 }}>Upgrade para o Plano Aberto</div>
         <div style={{ fontSize: '.78rem', color: 'rgba(255,255,255,.65)', marginBottom: 14 }}>Apareça em destaque e receba 3x mais visualizações.</div>
-        <button className="btn btn-green btn-sm">Ver planos · R$29/mês →</button>
+        <button className="btn btn-green btn-sm" onClick={() => setShowUpgrade(true)}>Ver planos · R$29/mês →</button>
       </div>
 
       <div style={{ height: 16 }} />
       <button className="fab" onClick={() => navigate('/lojista/produtos')} title="Adicionar produto">
         <Plus size={24} />
       </button>
+
+      {/* Modal de planos */}
+      {showUpgrade && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowUpgrade(false) }}>
+          <div style={{ background: 'var(--white)', borderRadius: 'var(--r-xl) var(--r-xl) 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: '24px 16px 40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: '1.1rem' }}>Escolha seu plano</div>
+                <div style={{ fontSize: '.78rem', color: 'var(--slate-400)' }}>Mais visibilidade, mais clientes</div>
+              </div>
+              <button onClick={() => setShowUpgrade(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)' }}>
+                <X size={22} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {PLANOS.map(p => (
+                <div key={p.slug} style={{ border: p.destaque ? '2px solid var(--green)' : '1.5px solid var(--slate-200)', borderRadius: 'var(--r-lg)', padding: 16, position: 'relative' }}>
+                  {p.destaque && (
+                    <div style={{ position: 'absolute', top: -11, left: 16, background: 'var(--green)', color: 'white', fontSize: '.68rem', fontWeight: 800, padding: '2px 10px', borderRadius: 'var(--r-full)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                      Mais popular
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '.95rem' }}>{p.nome}</div>
+                      <div style={{ fontWeight: 900, fontSize: '1.2rem', color: p.destaque ? 'var(--green)' : 'var(--navy)' }}>{p.preco}</div>
+                    </div>
+                  </div>
+                  <ul style={{ margin: '0 0 14px', paddingLeft: 18, color: 'var(--slate-600)', fontSize: '.82rem', lineHeight: 1.8 }}>
+                    {p.items.map(it => <li key={it}>{it}</li>)}
+                  </ul>
+                  {p.acao ? (
+                    <a href={p.acao} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'block', background: p.destaque ? 'var(--green)' : 'var(--navy)', color: 'white', textAlign: 'center', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '.88rem', textDecoration: 'none' }}>
+                      Assinar {p.nome} via WhatsApp →
+                    </a>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '.88rem', color: 'var(--slate-400)', background: 'var(--bg)' }}>
+                      Plano atual
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
