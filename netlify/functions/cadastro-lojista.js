@@ -41,12 +41,20 @@ async function supabaseAuth(email, password, nome) {
 }
 
 async function sendEmail(to, subject, html) {
-  if (!RESEND_KEY) return
-  await fetch('https://api.resend.com/emails', {
+  if (!RESEND_KEY) {
+    console.warn('[Resend] RESEND_API_KEY não definida — e-mail ignorado')
+    return { ok: false, error: 'chave ausente' }
+  }
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: `Pertim <${FROM}>`, to, subject, html }),
-  }).catch(() => {})
+  }).catch(err => { console.error('[Resend] fetch error:', err.message); return null })
+  if (!res) return { ok: false, error: 'network error' }
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) console.error('[Resend] erro:', res.status, JSON.stringify(data))
+  else console.log('[Resend] enviado para', to, '— id:', data.id)
+  return { ok: res.ok, status: res.status, data }
 }
 
 async function sendWhatsApp(phone, message) {
