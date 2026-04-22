@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Eye, MessageCircle, Bell, ChevronRight, Package, LogIn, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
-const ADMIN_WA = (import.meta.env.VITE_ADMIN_WHATSAPP || '61986274610').replace(/\D/g, '')
+const ADMIN_WA = (import.meta.env.VITE_ADMIN_WHATSAPP || '18259713697').replace(/\D/g, '')
 
 const PLANOS = [
   {
