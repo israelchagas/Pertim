@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Eye, Trash2, Search, CheckCircle, XCircle, ToggleLeft, ToggleRight, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, CheckCircle, XCircle, ToggleLeft, ToggleRight, X, Mail, MessageCircle, ChevronDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { LOJAS } from '../../lib/mockData'
 
@@ -15,59 +15,107 @@ const CATEGORIAS = [
   { slug: 'outros',   emoji: '✨', nome: 'Outros' },
 ]
 
+const BAIRROS = ['Riacho Fundo 1', 'Riacho Fundo 2', 'Candangolândia', 'Núcleo Bandeirante', 'Park Way']
 const FORM_VAZIO = { nomeLoja: '', categoria: 'outros', whatsapp: '', endereco: '', bairro: 'Riacho Fundo 1', status: 'ativo' }
+
+/* ─── Campo de formulário reutilizável ─── */
+function Campo({ label, children }) {
+  return (
+    <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569', display: 'block' }}>
+      {label}
+      <div style={{ marginTop: 4 }}>{children}</div>
+    </label>
+  )
+}
+
+const inputStyle = { width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }
+
+/* ─── Modal base ─── */
+function Modal({ titulo, onClose, children }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto', padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a' }}>{titulo}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Dropdown de notificações ─── */
+function NotifDropdown({ loja, onNotif }) {
+  const [open, setOpen] = useState(false)
+
+  const opcoes = [
+    { tipo: 'boasVindas', canal: 'email',    label: '📧 E-mail de boas-vindas' },
+    { tipo: 'aprovacao',  canal: 'email',    label: '📧 E-mail de aprovação' },
+    { tipo: 'lembrete',   canal: 'email',    label: '📧 Lembrete de produtos' },
+    { tipo: 'boasVindas', canal: 'whatsapp', label: '💬 WhatsApp boas-vindas' },
+    { tipo: 'aprovacao',  canal: 'whatsapp', label: '💬 WhatsApp aprovação' },
+    { tipo: 'lembrete',   canal: 'whatsapp', label: '💬 WhatsApp lembrete' },
+  ]
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        className="admin-action-btn"
+        onClick={() => setOpen(o => !o)}
+        title="Notificações"
+        style={{ display: 'flex', alignItems: 'center', gap: 3 }}
+      >
+        <Mail size={12} /><ChevronDown size={10} />
+      </button>
+      {open && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setOpen(false)} />
+          <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 100, minWidth: 220, overflow: 'hidden' }}>
+            <div style={{ padding: '8px 14px', fontSize: '.7rem', fontWeight: 700, color: '#94a3b8', borderBottom: '1px solid #f1f5f9', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+              Notificar lojista
+            </div>
+            {opcoes.map((op, i) => (
+              <button key={i} onClick={() => { setOpen(false); onNotif(op.tipo, op.canal) }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '.82rem', color: '#334155', borderBottom: i < opcoes.length - 1 ? '1px solid #f8fafc' : 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function AdminLojas() {
   const [lojas, setLojas] = useState(
     LOJAS.map(l => ({ ...l, status: 'ativo', plano: 'vizinho', categoria_slug: l.categoria.slug }))
   )
   const [filtroStatus, setFiltroStatus] = useState('todos')
-  const [filtroPlano, setFiltroPlano] = useState('todos')
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [toast, setToast] = useState('')
-  const [modal, setModal] = useState(false)
-  const [form, setForm] = useState(FORM_VAZIO)
-  const [salvando, setSalvando] = useState(false)
-  const [erroForm, setErroForm] = useState('')
+  const [filtroPlano, setFiltroPlano]   = useState('todos')
+  const [search, setSearch]             = useState('')
+  const [loading, setLoading]           = useState(true)
+  const [toast, setToast]               = useState('')
 
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+  // modais
+  const [modalNova, setModalNova]         = useState(false)
+  const [lojaEditando, setLojaEditando]   = useState(null)   // null = fechado
+  const [formNova, setFormNova]           = useState(FORM_VAZIO)
+  const [formEdit, setFormEdit]           = useState({})
+  const [erroNova, setErroNova]           = useState('')
+  const [erroEdit, setErroEdit]           = useState('')
+  const [salvando, setSalvando]           = useState(false)
+  const [enviando, setEnviando]           = useState(false)
 
-  const abrirModal = () => { setForm(FORM_VAZIO); setErroForm(''); setModal(true) }
-  const fecharModal = () => setModal(false)
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  const criarLoja = async () => {
-    if (!form.nomeLoja.trim()) { setErroForm('Informe o nome da loja'); return }
-    if (form.whatsapp.replace(/\D/g, '').length < 10) { setErroForm('WhatsApp inválido (ex: 61999999999)'); return }
-    setSalvando(true)
-    setErroForm('')
-    try {
-      const res = await fetch('/.netlify/functions/criar-loja-admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Erro ao criar loja')
-      const nova = data.loja
-      if (nova) {
-        const cat = CATEGORIAS.find(c => c.slug === form.categoria) || { emoji: '✨', nome: 'Outros', slug: form.categoria }
-        setLojas(prev => [{ ...nova, categoria: cat }, ...prev])
-      }
-      fecharModal()
-      showToast('✅ Loja criada com sucesso!')
-    } catch (err) {
-      setErroForm(err.message)
-    } finally {
-      setSalvando(false)
-    }
-  }
-
+  /* ─── Carregar lojas ─── */
   useEffect(() => {
-    supabase
-      .from('lojas')
-      .select('*, categorias(*)')
-      .order('created_at', { ascending: false })
+    supabase.from('lojas').select('*, categorias(*)').order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data?.length) {
           setLojas(data.map(l => ({
@@ -79,31 +127,126 @@ export default function AdminLojas() {
       })
   }, [])
 
+  /* ─── Ações diretas ─── */
   const aprovar = async (id) => {
     const { error } = await supabase.from('lojas').update({ status: 'ativo' }).eq('id', id)
-    if (!error) { setLojas(prev => prev.map(l => l.id === id ? { ...l, status: 'ativo' } : l)); showToast('✅ Loja aprovada!') }
+    if (!error) { setLojas(p => p.map(l => l.id === id ? { ...l, status: 'ativo' } : l)); showToast('✅ Loja aprovada!') }
   }
 
   const rejeitar = async (id) => {
     const { error } = await supabase.from('lojas').update({ status: 'inativo' }).eq('id', id)
-    if (!error) { setLojas(prev => prev.map(l => l.id === id ? { ...l, status: 'inativo' } : l)); showToast('❌ Loja rejeitada') }
+    if (!error) { setLojas(p => p.map(l => l.id === id ? { ...l, status: 'inativo' } : l)); showToast('❌ Loja rejeitada') }
   }
 
   const toggleAberta = async (id, atual) => {
     const { error } = await supabase.from('lojas').update({ aberta: !atual }).eq('id', id)
-    if (!error) setLojas(prev => prev.map(l => l.id === id ? { ...l, aberta: !atual } : l))
+    if (!error) setLojas(p => p.map(l => l.id === id ? { ...l, aberta: !atual } : l))
   }
 
   const excluir = async (id) => {
-    if (!confirm('Tem certeza que deseja excluir esta loja?')) return
+    if (!confirm('Excluir esta loja permanentemente?')) return
     const { error } = await supabase.from('lojas').delete().eq('id', id)
-    if (!error) { setLojas(prev => prev.filter(l => l.id !== id)); showToast('🗑️ Loja removida') }
+    if (!error) { setLojas(p => p.filter(l => l.id !== id)); showToast('🗑️ Loja removida') }
+  }
+
+  /* ─── Criar loja ─── */
+  const criarLoja = async () => {
+    if (!formNova.nomeLoja.trim()) { setErroNova('Informe o nome da loja'); return }
+    if (formNova.whatsapp.replace(/\D/g, '').length < 10) { setErroNova('WhatsApp inválido'); return }
+    setSalvando(true); setErroNova('')
+    try {
+      const res = await fetch('/.netlify/functions/criar-loja-admin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formNova),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar loja')
+      if (data.loja) {
+        const cat = CATEGORIAS.find(c => c.slug === formNova.categoria) || { emoji: '✨', nome: 'Outros', slug: formNova.categoria }
+        setLojas(p => [{ ...data.loja, categoria: cat }, ...p])
+      }
+      setModalNova(false)
+      showToast('✅ Loja criada!')
+    } catch (err) { setErroNova(err.message) }
+    finally { setSalvando(false) }
+  }
+
+  /* ─── Editar loja ─── */
+  const abrirEdicao = (loja) => {
+    setFormEdit({
+      id: loja.id,
+      nome: loja.nome || '',
+      whatsapp: loja.whatsapp || '',
+      endereco: loja.endereco || '',
+      bairro: loja.bairro || 'Riacho Fundo 1',
+      status: loja.status || 'ativo',
+      plano: loja.plano || 'vizinho',
+      categoria: loja.categoria?.slug || 'outros',
+      email: loja.email || '',
+    })
+    setErroEdit('')
+    setLojaEditando(loja)
+  }
+
+  const salvarEdicao = async () => {
+    if (!formEdit.nome.trim()) { setErroEdit('Informe o nome da loja'); return }
+    if (formEdit.whatsapp.replace(/\D/g, '').length < 10) { setErroEdit('WhatsApp inválido'); return }
+    setSalvando(true); setErroEdit('')
+    try {
+      const catRes = await supabase.from('categorias').select('id').eq('slug', formEdit.categoria).single()
+      const { error } = await supabase.from('lojas').update({
+        nome: formEdit.nome,
+        whatsapp: formEdit.whatsapp.replace(/\D/g, ''),
+        endereco: formEdit.endereco,
+        bairro: formEdit.bairro,
+        status: formEdit.status,
+        plano: formEdit.plano,
+        categoria_id: catRes.data?.id || null,
+      }).eq('id', formEdit.id)
+      if (error) throw new Error(error.message)
+      const cat = CATEGORIAS.find(c => c.slug === formEdit.categoria) || { emoji: '✨', nome: 'Outros', slug: formEdit.categoria }
+      setLojas(p => p.map(l => l.id === formEdit.id ? { ...l, ...formEdit, nome: formEdit.nome, categoria: cat } : l))
+      setLojaEditando(null)
+      showToast('✅ Loja atualizada!')
+    } catch (err) { setErroEdit(err.message) }
+    finally { setSalvando(false) }
+  }
+
+  /* ─── Notificar lojista ─── */
+  const notificar = async (loja, tipo, canal) => {
+    const email   = loja.email || formEdit.email
+    const wpp     = loja.whatsapp
+    const nome    = loja.nome
+    const nomeLoja = loja.nome
+
+    if (canal === 'email' && !email) {
+      showToast('⚠️ E-mail do lojista não cadastrado — edite a loja e informe o e-mail')
+      return
+    }
+
+    setEnviando(true)
+    try {
+      const res = await fetch('/.netlify/functions/notificar-lojista', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, canal, email, whatsapp: wpp, nome, nomeLoja }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar')
+
+      const labels = { boasVindas: 'boas-vindas', aprovacao: 'aprovação', lembrete: 'lembrete' }
+      const canalLabel = canal === 'email' ? '📧 E-mail' : '💬 WhatsApp'
+      showToast(`${canalLabel} de ${labels[tipo]} enviado!`)
+    } catch (err) {
+      showToast(`❌ ${err.message}`)
+    } finally {
+      setEnviando(false)
+    }
   }
 
   const filtradas = lojas.filter(l => {
     if (filtroStatus !== 'todos' && l.status !== filtroStatus) return false
     if (filtroPlano !== 'todos' && l.plano !== filtroPlano) return false
-    if (search && !l.nome.toLowerCase().includes(search.toLowerCase())) return false
+    if (search && !l.nome?.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
@@ -117,19 +260,16 @@ export default function AdminLojas() {
           <div className="admin-card-title">
             Lojas <span style={{ color: '#94a3b8', fontWeight: 500 }}>({filtradas.length})</span>
           </div>
-          <button className="admin-action-btn primary" onClick={abrirModal}><Plus size={14} /> Nova loja</button>
+          <button className="admin-action-btn primary" onClick={() => { setFormNova(FORM_VAZIO); setErroNova(''); setModalNova(true) }}>
+            <Plus size={14} /> Nova loja
+          </button>
         </div>
 
         <div className="admin-filters">
           <div style={{ position: 'relative' }}>
             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-            <input
-              className="admin-search-input"
-              style={{ paddingLeft: 32 }}
-              placeholder="Buscar por nome..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+            <input className="admin-search-input" style={{ paddingLeft: 32 }} placeholder="Buscar por nome..."
+              value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select className="admin-filter-select" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
             <option value="todos">Todos os status</option>
@@ -143,7 +283,8 @@ export default function AdminLojas() {
             <option value="aberto">Aberto (R$29)</option>
             <option value="radar">Radar (R$79)</option>
           </select>
-          {loading && <span style={{ fontSize: '.8rem', color: '#94a3b8' }}>Carregando do Supabase...</span>}
+          {loading && <span style={{ fontSize: '.8rem', color: '#94a3b8' }}>Carregando...</span>}
+          {enviando && <span style={{ fontSize: '.8rem', color: '#10b981' }}>Enviando notificação...</span>}
         </div>
 
         <div style={{ overflowX: 'auto' }}>
@@ -161,11 +302,7 @@ export default function AdminLojas() {
             </thead>
             <tbody>
               {filtradas.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                    Nenhuma loja encontrada.
-                  </td>
-                </tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Nenhuma loja encontrada.</td></tr>
               ) : filtradas.map(l => (
                 <tr key={l.id}>
                   <td>
@@ -178,8 +315,9 @@ export default function AdminLojas() {
                     </div>
                   </td>
                   <td>
-                    <a href={`https://wa.me/55${l.whatsapp}`} target="_blank" style={{ color: '#25D366', fontWeight: 700, fontSize: '.82rem' }}>
-                      {l.whatsapp}
+                    <a href={`https://wa.me/55${l.whatsapp}`} target="_blank"
+                      style={{ color: '#25D366', fontWeight: 700, fontSize: '.82rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <MessageCircle size={12} /> {l.whatsapp}
                     </a>
                   </td>
                   <td style={{ color: '#64748b', fontSize: '.82rem' }}>{l.bairro || 'Riacho Fundo 1'}</td>
@@ -194,10 +332,8 @@ export default function AdminLojas() {
                     </span>
                   </td>
                   <td>
-                    <button
-                      onClick={() => toggleAberta(l.id, l.aberta)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: l.aberta ? '#10b981' : '#cbd5e1', padding: 0 }}
-                    >
+                    <button onClick={() => toggleAberta(l.id, l.aberta)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: l.aberta ? '#10b981' : '#cbd5e1', padding: 0 }}>
                       {l.aberta ? <ToggleRight size={26} /> : <ToggleLeft size={26} />}
                     </button>
                   </td>
@@ -212,8 +348,14 @@ export default function AdminLojas() {
                         </button>
                       </>
                     )}
-                    <button className="admin-action-btn"><Eye size={13} /></button>
-                    <button className="admin-action-btn danger" onClick={() => excluir(l.id)}>
+                    {/* Notificações */}
+                    <NotifDropdown loja={l} onNotif={(tipo, canal) => notificar(l, tipo, canal)} />
+                    {/* Editar */}
+                    <button className="admin-action-btn" onClick={() => abrirEdicao(l)} title="Editar">
+                      <Pencil size={13} />
+                    </button>
+                    {/* Excluir */}
+                    <button className="admin-action-btn danger" onClick={() => excluir(l.id)} title="Excluir">
                       <Trash2 size={13} />
                     </button>
                   </td>
@@ -225,83 +367,139 @@ export default function AdminLojas() {
       </div>
     </div>
 
-    {/* ─── Modal: Nova Loja ─── */}
-    {modal && (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-        <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a' }}>Nova loja</div>
-            <button onClick={fecharModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
-          </div>
-
-          {erroForm && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '10px 14px', fontSize: '.85rem', marginBottom: 16 }}>{erroForm}</div>}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
-              Nome da loja *
-              <input type="text" value={form.nomeLoja} onChange={e => setForm(f => ({ ...f, nomeLoja: e.target.value }))}
-                placeholder="Ex: Mercadinho do João"
-                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-            </label>
-
-            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
-              Categoria
-              <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
-                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit' }}>
-                {CATEGORIAS.map(c => <option key={c.slug} value={c.slug}>{c.emoji} {c.nome}</option>)}
+    {/* ─── Modal: Nova loja ─── */}
+    {modalNova && (
+      <Modal titulo="Nova loja" onClose={() => setModalNova(false)}>
+        {erroNova && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '10px 14px', fontSize: '.85rem', marginBottom: 16 }}>{erroNova}</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Campo label="Nome da loja *">
+            <input type="text" style={inputStyle} placeholder="Ex: Mercadinho do João"
+              value={formNova.nomeLoja} onChange={e => setFormNova(f => ({ ...f, nomeLoja: e.target.value }))} />
+          </Campo>
+          <Campo label="Categoria">
+            <select style={inputStyle} value={formNova.categoria} onChange={e => setFormNova(f => ({ ...f, categoria: e.target.value }))}>
+              {CATEGORIAS.map(c => <option key={c.slug} value={c.slug}>{c.emoji} {c.nome}</option>)}
+            </select>
+          </Campo>
+          <Campo label="WhatsApp * (com DDD)">
+            <input type="tel" style={inputStyle} placeholder="61999999999"
+              value={formNova.whatsapp} onChange={e => setFormNova(f => ({ ...f, whatsapp: e.target.value }))} />
+          </Campo>
+          <Campo label="Endereço (opcional)">
+            <input type="text" style={inputStyle} placeholder="Rua, número, quadra..."
+              value={formNova.endereco} onChange={e => setFormNova(f => ({ ...f, endereco: e.target.value }))} />
+          </Campo>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Campo label="Bairro">
+              <select style={inputStyle} value={formNova.bairro} onChange={e => setFormNova(f => ({ ...f, bairro: e.target.value }))}>
+                {BAIRROS.map(b => <option key={b}>{b}</option>)}
               </select>
-            </label>
-
-            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
-              WhatsApp * <span style={{ fontWeight: 400 }}>(com DDD)</span>
-              <input type="tel" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))}
-                placeholder="61999999999"
-                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-            </label>
-
-            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
-              Endereço <span style={{ fontWeight: 400 }}>(opcional)</span>
-              <input type="text" value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))}
-                placeholder="Rua, número, quadra..."
-                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-            </label>
-
-            <div style={{ display: 'flex', gap: 12 }}>
-              <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569', flex: 1 }}>
-                Bairro
-                <select value={form.bairro} onChange={e => setForm(f => ({ ...f, bairro: e.target.value }))}
-                  style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit' }}>
-                  <option>Riacho Fundo 1</option>
-                  <option>Riacho Fundo 2</option>
-                  <option>Candangolândia</option>
-                  <option>Núcleo Bandeirante</option>
-                  <option>Park Way</option>
-                </select>
-              </label>
-              <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569', flex: 1 }}>
-                Status inicial
-                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                  style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit' }}>
-                  <option value="ativo">Ativo</option>
-                  <option value="pendente">Pendente</option>
-                  <option value="inativo">Inativo</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            <button onClick={fecharModal}
-              style={{ flex: 1, padding: '12px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: 'none', cursor: 'pointer', fontWeight: 700, color: '#64748b' }}>
-              Cancelar
-            </button>
-            <button onClick={criarLoja} disabled={salvando}
-              style={{ flex: 2, padding: '12px', border: 'none', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, cursor: salvando ? 'not-allowed' : 'pointer', opacity: salvando ? .7 : 1 }}>
-              {salvando ? 'Criando...' : 'Criar loja →'}
-            </button>
+            </Campo>
+            <Campo label="Status">
+              <select style={inputStyle} value={formNova.status} onChange={e => setFormNova(f => ({ ...f, status: e.target.value }))}>
+                <option value="ativo">Ativo</option>
+                <option value="pendente">Pendente</option>
+                <option value="inativo">Inativo</option>
+              </select>
+            </Campo>
           </div>
         </div>
-      </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={() => setModalNova(false)}
+            style={{ flex: 1, padding: '12px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: 'none', cursor: 'pointer', fontWeight: 700, color: '#64748b' }}>
+            Cancelar
+          </button>
+          <button onClick={criarLoja} disabled={salvando}
+            style={{ flex: 2, padding: '12px', border: 'none', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, cursor: salvando ? 'not-allowed' : 'pointer', opacity: salvando ? .7 : 1 }}>
+            {salvando ? 'Criando...' : 'Criar loja →'}
+          </button>
+        </div>
+      </Modal>
+    )}
+
+    {/* ─── Modal: Editar loja ─── */}
+    {lojaEditando && (
+      <Modal titulo={`Editar — ${lojaEditando.nome}`} onClose={() => setLojaEditando(null)}>
+        {erroEdit && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '10px 14px', fontSize: '.85rem', marginBottom: 16 }}>{erroEdit}</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Campo label="Nome da loja *">
+            <input type="text" style={inputStyle} value={formEdit.nome}
+              onChange={e => setFormEdit(f => ({ ...f, nome: e.target.value }))} />
+          </Campo>
+          <Campo label="E-mail do lojista">
+            <input type="email" style={inputStyle} placeholder="para reenvio de e-mails"
+              value={formEdit.email} onChange={e => setFormEdit(f => ({ ...f, email: e.target.value }))} />
+          </Campo>
+          <Campo label="WhatsApp * (com DDD)">
+            <input type="tel" style={inputStyle} value={formEdit.whatsapp}
+              onChange={e => setFormEdit(f => ({ ...f, whatsapp: e.target.value }))} />
+          </Campo>
+          <Campo label="Categoria">
+            <select style={inputStyle} value={formEdit.categoria} onChange={e => setFormEdit(f => ({ ...f, categoria: e.target.value }))}>
+              {CATEGORIAS.map(c => <option key={c.slug} value={c.slug}>{c.emoji} {c.nome}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Endereço">
+            <input type="text" style={inputStyle} value={formEdit.endereco}
+              onChange={e => setFormEdit(f => ({ ...f, endereco: e.target.value }))} />
+          </Campo>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Campo label="Bairro">
+              <select style={inputStyle} value={formEdit.bairro} onChange={e => setFormEdit(f => ({ ...f, bairro: e.target.value }))}>
+                {BAIRROS.map(b => <option key={b}>{b}</option>)}
+              </select>
+            </Campo>
+            <Campo label="Status">
+              <select style={inputStyle} value={formEdit.status} onChange={e => setFormEdit(f => ({ ...f, status: e.target.value }))}>
+                <option value="ativo">Ativo</option>
+                <option value="pendente">Pendente</option>
+                <option value="inativo">Inativo</option>
+              </select>
+            </Campo>
+          </div>
+          <Campo label="Plano">
+            <select style={inputStyle} value={formEdit.plano} onChange={e => setFormEdit(f => ({ ...f, plano: e.target.value }))}>
+              <option value="vizinho">Vizinho (grátis)</option>
+              <option value="aberto">Aberto (R$29/mês)</option>
+              <option value="radar">Radar (R$79/mês)</option>
+            </select>
+          </Campo>
+
+          {/* Ações de notificação dentro do modal de edição */}
+          <div style={{ background: '#f8fafc', borderRadius: 10, padding: '14px 16px', marginTop: 4 }}>
+            <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#64748b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+              Notificar lojista
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {[
+                { tipo: 'boasVindas', canal: 'email',    label: '📧 Boas-vindas' },
+                { tipo: 'aprovacao',  canal: 'email',    label: '📧 Aprovação' },
+                { tipo: 'lembrete',   canal: 'email',    label: '📧 Lembrete' },
+                { tipo: 'boasVindas', canal: 'whatsapp', label: '💬 Boas-vindas' },
+                { tipo: 'aprovacao',  canal: 'whatsapp', label: '💬 Aprovação' },
+                { tipo: 'lembrete',   canal: 'whatsapp', label: '💬 Lembrete' },
+              ].map((op, i) => (
+                <button key={i} disabled={enviando}
+                  onClick={() => notificar({ ...lojaEditando, email: formEdit.email, whatsapp: formEdit.whatsapp }, op.tipo, op.canal)}
+                  style={{ padding: '7px 12px', border: '1.5px solid #e2e8f0', borderRadius: 7, background: '#fff', cursor: enviando ? 'not-allowed' : 'pointer', fontSize: '.78rem', fontWeight: 600, color: '#334155', opacity: enviando ? .6 : 1 }}>
+                  {op.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={() => setLojaEditando(null)}
+            style={{ flex: 1, padding: '12px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: 'none', cursor: 'pointer', fontWeight: 700, color: '#64748b' }}>
+            Cancelar
+          </button>
+          <button onClick={salvarEdicao} disabled={salvando}
+            style={{ flex: 2, padding: '12px', border: 'none', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, cursor: salvando ? 'not-allowed' : 'pointer', opacity: salvando ? .7 : 1 }}>
+            {salvando ? 'Salvando...' : 'Salvar alterações →'}
+          </button>
+        </div>
+      </Modal>
     )}
     </>
   )
