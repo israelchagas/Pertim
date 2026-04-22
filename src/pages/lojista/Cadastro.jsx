@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Mail, Lock, Eye, EyeOff, User, Phone, Store, ChevronRight, ChevronLeft, CheckCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { sendEmail, emailBoasVindas, emailNovoLead } from '../../lib/email'
 
 const CATEGORIAS = [
   { id: null, emoji: '🏪', nome: 'Selecione...' },
@@ -61,55 +60,32 @@ export default function Cadastro() {
 
     setLoading(true)
     try {
-      // 1. Criar usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.senha,
-        options: { data: { nome: form.nome } },
+      const res = await fetch('/.netlify/functions/cadastro-lojista', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: form.nome,
+          email: form.email,
+          senha: form.senha,
+          nomeLoja: form.nomeLoja,
+          categoria: form.categoria,
+          whatsapp: form.whatsapp,
+          endereco: form.endereco,
+          bairro: form.bairro,
+        }),
       })
-      if (authError) throw authError
 
-      // 2. Buscar categoria_id
-      const { data: catData } = await supabase
-        .from('categorias')
-        .select('id')
-        .eq('slug', form.categoria)
-        .single()
+      const data = await res.json().catch(() => ({}))
 
-      // 3. Criar loja com status pendente
-      const { error: lojaError } = await supabase.from('lojas').insert({
-        user_id: authData.user.id,
-        nome: form.nomeLoja,
-        categoria_id: catData?.id || null,
-        whatsapp: form.whatsapp.replace(/\D/g, ''),
-        endereco: form.endereco,
-        bairro: form.bairro,
-        status: 'pendente',
-        aberta: false,
-      })
-      if (lojaError) throw lojaError
+      if (res.status === 409) throw new Error('Este e-mail já possui uma conta. Faça login.')
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar conta. Tente novamente.')
 
-      // 4. E-mail de boas-vindas (não bloqueia)
-      sendEmail(
-        form.email,
-        '🎉 Bem-vindo ao Pertim! Sua loja foi cadastrada',
-        emailBoasVindas(form.nomeLoja, form.nome.split(' ')[0])
-      ).catch(() => {})
-
-      // 5. Notificar admin
-      sendEmail(
-        'oi@pertim.online',
-        `Nova loja cadastrada: ${form.nomeLoja}`,
-        emailNovoLead(form.nomeLoja, form.whatsapp)
-      ).catch(() => {})
+      // Faz login automático após cadastro
+      await supabase.auth.signInWithPassword({ email: form.email, password: form.senha })
 
       setStep(3)
     } catch (err) {
-      if (err.message?.includes('already registered')) {
-        setErro('Este e-mail já possui uma conta. Faça login.')
-      } else {
-        setErro(err.message || 'Erro ao criar conta. Tente novamente.')
-      }
+      setErro(err.message)
     } finally {
       setLoading(false)
     }
