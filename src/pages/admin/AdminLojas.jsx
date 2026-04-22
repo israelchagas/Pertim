@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Plus, Eye, Trash2, Search, CheckCircle, XCircle, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Eye, Trash2, Search, CheckCircle, XCircle, ToggleLeft, ToggleRight, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { LOJAS } from '../../lib/mockData'
+
+const CATEGORIAS = [
+  { slug: 'mercado',   emoji: '🛒', nome: 'Mercado / Mercearia' },
+  { slug: 'lanches',  emoji: '🍔', nome: 'Lanches / Restaurante' },
+  { slug: 'farmacia', emoji: '💊', nome: 'Farmácia / Saúde' },
+  { slug: 'beleza',   emoji: '💇', nome: 'Beleza / Barbearia' },
+  { slug: 'pet',      emoji: '🐾', nome: 'Pet Shop' },
+  { slug: 'eletro',   emoji: '📱', nome: 'Eletrônicos / Informática' },
+  { slug: 'servicos', emoji: '🔧', nome: 'Serviços Gerais' },
+  { slug: 'moda',     emoji: '👗', nome: 'Moda / Acessórios' },
+  { slug: 'outros',   emoji: '✨', nome: 'Outros' },
+]
+
+const FORM_VAZIO = { nomeLoja: '', categoria: 'outros', whatsapp: '', endereco: '', bairro: 'Riacho Fundo 1', status: 'ativo' }
 
 export default function AdminLojas() {
   const [lojas, setLojas] = useState(
@@ -12,8 +26,42 @@ export default function AdminLojas() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState('')
+  const [modal, setModal] = useState(false)
+  const [form, setForm] = useState(FORM_VAZIO)
+  const [salvando, setSalvando] = useState(false)
+  const [erroForm, setErroForm] = useState('')
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  const abrirModal = () => { setForm(FORM_VAZIO); setErroForm(''); setModal(true) }
+  const fecharModal = () => setModal(false)
+
+  const criarLoja = async () => {
+    if (!form.nomeLoja.trim()) { setErroForm('Informe o nome da loja'); return }
+    if (form.whatsapp.replace(/\D/g, '').length < 10) { setErroForm('WhatsApp inválido (ex: 61999999999)'); return }
+    setSalvando(true)
+    setErroForm('')
+    try {
+      const res = await fetch('/.netlify/functions/criar-loja-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar loja')
+      const nova = data.loja
+      if (nova) {
+        const cat = CATEGORIAS.find(c => c.slug === form.categoria) || { emoji: '✨', nome: 'Outros', slug: form.categoria }
+        setLojas(prev => [{ ...nova, categoria: cat }, ...prev])
+      }
+      fecharModal()
+      showToast('✅ Loja criada com sucesso!')
+    } catch (err) {
+      setErroForm(err.message)
+    } finally {
+      setSalvando(false)
+    }
+  }
 
   useEffect(() => {
     supabase
@@ -60,6 +108,7 @@ export default function AdminLojas() {
   })
 
   return (
+    <>
     <div className="admin-main">
       {toast && <div className="toast">{toast}</div>}
 
@@ -68,7 +117,7 @@ export default function AdminLojas() {
           <div className="admin-card-title">
             Lojas <span style={{ color: '#94a3b8', fontWeight: 500 }}>({filtradas.length})</span>
           </div>
-          <button className="admin-action-btn primary"><Plus size={14} /> Nova loja</button>
+          <button className="admin-action-btn primary" onClick={abrirModal}><Plus size={14} /> Nova loja</button>
         </div>
 
         <div className="admin-filters">
@@ -175,5 +224,85 @@ export default function AdminLojas() {
         </div>
       </div>
     </div>
+
+    {/* ─── Modal: Nova Loja ─── */}
+    {modal && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, padding: 32, boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a' }}>Nova loja</div>
+            <button onClick={fecharModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
+          </div>
+
+          {erroForm && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '10px 14px', fontSize: '.85rem', marginBottom: 16 }}>{erroForm}</div>}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
+              Nome da loja *
+              <input type="text" value={form.nomeLoja} onChange={e => setForm(f => ({ ...f, nomeLoja: e.target.value }))}
+                placeholder="Ex: Mercadinho do João"
+                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            </label>
+
+            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
+              Categoria
+              <select value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit' }}>
+                {CATEGORIAS.map(c => <option key={c.slug} value={c.slug}>{c.emoji} {c.nome}</option>)}
+              </select>
+            </label>
+
+            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
+              WhatsApp * <span style={{ fontWeight: 400 }}>(com DDD)</span>
+              <input type="tel" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))}
+                placeholder="61999999999"
+                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            </label>
+
+            <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569' }}>
+              Endereço <span style={{ fontWeight: 400 }}>(opcional)</span>
+              <input type="text" value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))}
+                placeholder="Rua, número, quadra..."
+                style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            </label>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569', flex: 1 }}>
+                Bairro
+                <select value={form.bairro} onChange={e => setForm(f => ({ ...f, bairro: e.target.value }))}
+                  style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit' }}>
+                  <option>Riacho Fundo 1</option>
+                  <option>Riacho Fundo 2</option>
+                  <option>Candangolândia</option>
+                  <option>Núcleo Bandeirante</option>
+                  <option>Park Way</option>
+                </select>
+              </label>
+              <label style={{ fontSize: '.82rem', fontWeight: 700, color: '#475569', flex: 1 }}>
+                Status inicial
+                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                  style={{ display: 'block', marginTop: 4, width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: '.9rem', fontFamily: 'inherit' }}>
+                  <option value="ativo">Ativo</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="inativo">Inativo</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+            <button onClick={fecharModal}
+              style={{ flex: 1, padding: '12px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: 'none', cursor: 'pointer', fontWeight: 700, color: '#64748b' }}>
+              Cancelar
+            </button>
+            <button onClick={criarLoja} disabled={salvando}
+              style={{ flex: 2, padding: '12px', border: 'none', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, cursor: salvando ? 'not-allowed' : 'pointer', opacity: salvando ? .7 : 1 }}>
+              {salvando ? 'Criando...' : 'Criar loja →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
