@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Eye, MessageCircle, Bell, ChevronRight, Package, LogIn, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
+const ADMIN_WA = (import.meta.env.VITE_ADMIN_WHATSAPP || '61986274610').replace(/\D/g, '')
+
 const PLANOS = [
   {
     slug: 'vizinho', nome: 'Vizinho', preco: 'Grátis',
@@ -15,13 +17,13 @@ const PLANOS = [
     cor: 'var(--green)', corTexto: 'white',
     destaque: true,
     items: ['Tudo do Vizinho', 'Destaque nos resultados', 'Produtos ilimitados', 'Estatísticas avançadas', 'Suporte prioritário'],
-    acao: 'https://wa.me/5561999999999?text=Quero+assinar+o+Plano+Aberto+do+Pertim',
+    acao: `https://wa.me/55${ADMIN_WA}?text=Quero+assinar+o+Plano+Aberto+do+Pertim`,
   },
   {
     slug: 'radar', nome: 'Radar', preco: 'R$79/mês',
     cor: 'var(--navy)', corTexto: 'white',
     items: ['Tudo do Aberto', 'Banner na tela inicial', 'Notificações push aos moradores', 'Relatórios semanais por WhatsApp'],
-    acao: 'https://wa.me/5561999999999?text=Quero+assinar+o+Plano+Radar+do+Pertim',
+    acao: `https://wa.me/55${ADMIN_WA}?text=Quero+assinar+o+Plano+Radar+do+Pertim`,
   },
 ]
 
