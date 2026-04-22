@@ -33,6 +33,7 @@ async function supabaseAuth(email, password, nome) {
       password,
       email_confirm: true,
       user_metadata: { nome },
+      app_metadata: { provider: 'email', providers: ['email'] },
     }),
   })
   const data = await res.json().catch(() => ({}))
