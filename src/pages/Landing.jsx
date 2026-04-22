@@ -436,11 +436,31 @@ function Benefits() {
 /* ─── B2B / LOJISTAS ─── */
 function Lojistas() {
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ nome: '', loja: '', whatsapp: '', tipo: '' });
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState('');
+  const [form, setForm] = useState({ nome: '', loja: '', whatsapp: '', tipo: '', bairro: 'Riacho Fundo 1' });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setErro('');
+    if (!form.nome.trim()) { setErro('Informe seu nome.'); return; }
+    if (form.whatsapp.replace(/\D/g, '').length < 10) { setErro('WhatsApp inválido — inclua o DDD.'); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/.netlify/functions/capturar-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, origem: 'landing' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar. Tente novamente.');
+      setSubmitted(true);
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -478,7 +498,7 @@ function Lojistas() {
               <button className="btn btn-green btn-lg" onClick={() => document.querySelector('.register-card')?.scrollIntoView({ behavior: 'smooth' })}>
                 Quero Cadastrar Minha Loja
               </button>
-              <button className="btn btn-outline-white btn-lg">
+              <button className="btn btn-outline-white btn-lg" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}>
                 Ver Como Funciona
               </button>
             </div>
@@ -488,7 +508,7 @@ function Lojistas() {
             {submitted ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
                 <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎉</div>
-                <h3>Cadastro recebido!</h3>
+                <h3>Interesse registrado!</h3>
                 <p style={{ color: 'var(--slate-500)', marginTop: 12, lineHeight: 1.7 }}>
                   Nossa equipe vai entrar em contato pelo WhatsApp em até 24 horas para ativar sua vitrine. Fique de olho!
                 </p>
@@ -500,15 +520,21 @@ function Lojistas() {
               <>
                 <h3>Traga sua loja para o Pertim</h3>
                 <p>Gratuito. Sem fidelidade. Sem taxa de adesão.</p>
+
+                {erro && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '10px 14px', fontSize: '.85rem', marginBottom: 16 }}>
+                    {erro}
+                  </div>
+                )}
+
                 <form className="form-row" onSubmit={handleSubmit}>
                   <div className="form-field">
-                    <label>Seu nome</label>
+                    <label>Seu nome *</label>
                     <input
                       type="text"
                       placeholder="Ex: João Silva"
                       value={form.nome}
                       onChange={e => setForm({...form, nome: e.target.value})}
-                      required
                     />
                   </div>
                   <div className="form-field">
@@ -518,26 +544,20 @@ function Lojistas() {
                       placeholder="Ex: Padaria Central"
                       value={form.loja}
                       onChange={e => setForm({...form, loja: e.target.value})}
-                      required
                     />
                   </div>
                   <div className="form-field">
-                    <label>WhatsApp</label>
+                    <label>WhatsApp * <span style={{ fontWeight: 400, fontSize: '.8rem', opacity: .7 }}>(com DDD)</span></label>
                     <input
                       type="tel"
-                      placeholder="(11) 99999-9999"
+                      placeholder="61 99999-9999"
                       value={form.whatsapp}
                       onChange={e => setForm({...form, whatsapp: e.target.value})}
-                      required
                     />
                   </div>
                   <div className="form-field">
                     <label>Tipo de negócio</label>
-                    <select
-                      value={form.tipo}
-                      onChange={e => setForm({...form, tipo: e.target.value})}
-                      required
-                    >
+                    <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
                       <option value="">Selecione...</option>
                       <option>Padaria / Confeitaria</option>
                       <option>Mercearia / Mercadinho</option>
@@ -546,11 +566,24 @@ function Lojistas() {
                       <option>Ferragens / Material de Construção</option>
                       <option>Prestador de Serviços</option>
                       <option>Restaurante / Lanchonete</option>
+                      <option>Beleza / Barbearia</option>
+                      <option>Pet Shop</option>
                       <option>Outro comércio local</option>
                     </select>
                   </div>
-                  <button type="submit" className="btn btn-green btn-lg">
-                    Quero Minha Vitrine Grátis <ArrowRight size={18} />
+                  <div className="form-field">
+                    <label>Bairro</label>
+                    <select value={form.bairro} onChange={e => setForm({...form, bairro: e.target.value})}>
+                      <option>Riacho Fundo 1</option>
+                      <option>Riacho Fundo 2</option>
+                      <option>Candangolândia</option>
+                      <option>Núcleo Bandeirante</option>
+                      <option>Park Way</option>
+                      <option>Outro</option>
+                    </select>
+                  </div>
+                  <button type="submit" className="btn btn-green btn-lg" disabled={loading}>
+                    {loading ? 'Enviando...' : <> Quero Minha Vitrine Grátis <ArrowRight size={18} /> </>}
                   </button>
                 </form>
                 <p className="register-guarantee">
