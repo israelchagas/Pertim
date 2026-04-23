@@ -219,39 +219,57 @@ export default function AdminLojas() {
     finally { setSalvando(false) }
   }
 
+  /* ─── Mensagens WhatsApp por tipo ─── */
+  const WA_MSGS = {
+    boasVindas: (nome, nomeLoja) =>
+      `Olá ${nome}! 👋\n\nSua loja *${nomeLoja}* foi cadastrada no *Pertim* com sucesso!\n\nEm até 24h nossa equipe irá aprovar e você aparecerá para os moradores do bairro. 🏘️\n\nAcesse seu painel: https://pertim.online/lojista`,
+    aprovacao: (nome, nomeLoja) =>
+      `🎊 Parabéns, ${nome}!\n\nSua loja *${nomeLoja}* foi *aprovada* no Pertim!\n\nVocê já está aparecendo no mapa e na busca dos moradores do bairro. 🗺️\n\nAcesse seu painel agora: https://pertim.online/lojista`,
+    lembrete: (nome, nomeLoja) =>
+      `Oi ${nome}! 👋\n\nSua loja *${nomeLoja}* está no Pertim, mas ainda sem produtos cadastrados.\n\nAdicione agora — é simples como postar uma foto! 📸\n\nhttps://pertim.online/lojista/produtos`,
+  }
+
   /* ─── Notificar lojista ─── */
   const notificar = async (loja, tipo, canal) => {
-    const email   = loja.email || formEdit.email
-    const wpp     = loja.whatsapp
-    const nome    = loja.nome
+    const email    = loja.email || formEdit?.email
+    const wpp      = loja.whatsapp
+    const nome     = loja.nome
     const nomeLoja = loja.nome
 
-    if (canal === 'email' && !email) {
-      showToast('⚠️ E-mail do lojista não cadastrado — edite a loja e informe o e-mail')
+    /* WhatsApp — abre wa.me com mensagem pronta, sem API */
+    if (canal === 'whatsapp') {
+      if (!wpp) { showToast('⚠️ WhatsApp do lojista não cadastrado'); return }
+      const digits  = String(wpp).replace(/\D/g, '')
+      const msg     = WA_MSGS[tipo]?.(nome, nomeLoja) || ''
+      const url     = `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`
+      window.open(url, '_blank')
+      showToast('💬 WhatsApp aberto — envie a mensagem!')
       return
     }
 
-    setEnviando(true)
-    try {
-      let res, data
+    /* E-mail — via Netlify Function + Resend */
+    if (canal === 'email') {
+      if (!email) { showToast('⚠️ E-mail do lojista não cadastrado — edite a loja e informe o e-mail'); return }
+      setEnviando(true)
       try {
-        res  = await fetch('/.netlify/functions/notificar-lojista', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipo, canal, email, whatsapp: wpp, nome, nomeLoja }),
-        })
-        data = await res.json().catch(() => ({}))
-      } catch (netErr) {
-        throw new Error(`Função indisponível — verifique o deploy da Netlify (${netErr.message})`)
+        let res, data
+        try {
+          res  = await fetch('/.netlify/functions/notificar-lojista', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo, canal: 'email', email, whatsapp: wpp, nome, nomeLoja }),
+          })
+          data = await res.json().catch(() => ({}))
+        } catch (netErr) {
+          throw new Error(`Função indisponível (${netErr.message})`)
+        }
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+        const labels = { boasVindas: 'boas-vindas', aprovacao: 'aprovação', lembrete: 'lembrete' }
+        showToast(`📧 E-mail de ${labels[tipo]} enviado!`)
+      } catch (err) {
+        showToast(`❌ ${err.message}`)
+      } finally {
+        setEnviando(false)
       }
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-
-      const labels = { boasVindas: 'boas-vindas', aprovacao: 'aprovação', lembrete: 'lembrete' }
-      const canalLabel = canal === 'email' ? '📧 E-mail' : '💬 WhatsApp'
-      showToast(`${canalLabel} de ${labels[tipo]} enviado!`)
-    } catch (err) {
-      showToast(`❌ ${err.message}`)
-    } finally {
-      setEnviando(false)
     }
   }
 
