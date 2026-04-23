@@ -1,37 +1,32 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Store, Users, TrendingUp, Radio, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Store, Users, TrendingUp, CheckCircle, ArrowRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { LOJAS } from '../../lib/mockData'
-
-const LEADS_MOCK = [
-  { nome: 'Carlos Eduardo', loja: 'Mercadinho do Carlos', tipo: 'Mercado', status: 'novo', created_at: '2026-04-20' },
-  { nome: 'Marcia Santos', loja: 'Salão da Marcia', tipo: 'Beleza', status: 'contatado', created_at: '2026-04-19' },
-  { nome: 'João Ferreira', loja: 'Ferragens do João', tipo: 'Ferragens', status: 'novo', created_at: '2026-04-20' },
-]
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [stats, setStats] = useState({ total: 8, ativas: 6, abertas: 5, leads: 12, pendentes: 2, mrr: 0 })
+  const [stats, setStats] = useState({ total: 0, ativas: 0, abertas: 0, leads: 0, pendentes: 0, mrr: 0 })
+  const [lojasRecentes, setLojasRecentes] = useState([])
+  const [leadsRecentes, setLeadsRecentes] = useState([])
 
   useEffect(() => {
     Promise.allSettled([
-      supabase.from('lojas').select('status, aberta, plano'),
-      supabase.from('leads').select('status'),
+      supabase.from('lojas').select('id, nome, status, aberta, plano, bairro, categorias(emoji, nome)').order('created_at', { ascending: false }),
+      supabase.from('leads').select('id, nome, loja, status, created_at').order('created_at', { ascending: false }).limit(5),
     ]).then(([lRes, ldRes]) => {
       const lojas = lRes.value?.data || []
       const leads = ldRes.value?.data || []
-      if (lojas.length) {
-        const pagos = lojas.filter(l => l.plano === 'aberto' || l.plano === 'radar')
-        setStats({
-          total: lojas.length,
-          ativas: lojas.filter(l => l.status === 'ativo').length,
-          abertas: lojas.filter(l => l.aberta).length,
-          leads: leads.length,
-          pendentes: lojas.filter(l => l.status === 'pendente').length,
-          mrr: pagos.filter(l => l.plano === 'aberto').length * 29 + pagos.filter(l => l.plano === 'radar').length * 79,
-        })
-      }
+      const pagos = lojas.filter(l => l.plano === 'aberto' || l.plano === 'radar')
+      setStats({
+        total: lojas.length,
+        ativas: lojas.filter(l => l.status === 'ativo').length,
+        abertas: lojas.filter(l => l.aberta).length,
+        leads: leads.length,
+        pendentes: lojas.filter(l => l.status === 'pendente').length,
+        mrr: pagos.filter(l => l.plano === 'aberto').length * 29 + pagos.filter(l => l.plano === 'radar').length * 79,
+      })
+      setLojasRecentes(lojas.slice(0, 6))
+      setLeadsRecentes(leads)
     })
   }, [])
 
@@ -45,10 +40,10 @@ export default function AdminDashboard() {
   const STATUS_SETUP = [
     { label: 'Supabase Database', ok: true, action: null },
     { label: 'Netlify Deploy', ok: true, action: null },
-    { label: 'Mapbox (Mapa)', ok: true, action: null },
-    { label: 'Z-API (WhatsApp)', ok: true, action: null },
+    { label: 'Mapa (Leaflet/OSM)', ok: true, action: null },
+    { label: 'WhatsApp (wa.me)', ok: true, action: null },
+    { label: 'Resend (Email)', ok: true, action: null },
     { label: 'Asaas (Pagamentos)', ok: false, action: 'Criar conta em asaas.com e adicionar ASAAS_API_KEY' },
-    { label: 'Resend (Email)', ok: false, action: 'Gerar nova chave em resend.com/api-keys' },
     { label: 'OneSignal (Push)', ok: false, action: 'Criar app em onesignal.com' },
   ]
 
@@ -93,24 +88,26 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {LOJAS.slice(0, 6).map(l => (
+              {lojasRecentes.length === 0 ? (
+                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#94a3b8', fontSize: '.85rem' }}>Nenhuma loja cadastrada.</td></tr>
+              ) : lojasRecentes.map(l => (
                 <tr key={l.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '1.2rem' }}>{l.categoria.emoji}</span>
+                      <span style={{ fontSize: '1.2rem' }}>{l.categorias?.emoji || '🏪'}</span>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: '.85rem' }}>{l.nome}</div>
-                        <div style={{ fontSize: '.7rem', color: '#94a3b8' }}>{l.bairro}</div>
+                        <div style={{ fontSize: '.7rem', color: '#94a3b8' }}>{l.bairro || 'Riacho Fundo 1'}</div>
                       </div>
                     </div>
                   </td>
-                  <td><span className="badge-status-ativo">Ativo</span></td>
+                  <td><span className={`badge-status-${l.status || 'ativo'}`}>{(l.status || 'ativo').charAt(0).toUpperCase() + (l.status || 'ativo').slice(1)}</span></td>
                   <td>
                     <span className={l.aberta ? 'badge-open' : 'badge-closed'} style={{ fontSize: '.65rem' }}>
                       {l.aberta ? '● Aberta' : '● Fechada'}
                     </span>
                   </td>
-                  <td><span className="badge-plano-vizinho">Vizinho</span></td>
+                  <td><span className={`badge-plano-${l.plano || 'vizinho'}`}>{(l.plano || 'vizinho').charAt(0).toUpperCase() + (l.plano || 'vizinho').slice(1)}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -150,8 +147,10 @@ export default function AdminDashboard() {
               <button className="admin-action-btn" onClick={() => navigate('/admin/leads')}>Ver todos →</button>
             </div>
             <div>
-              {LEADS_MOCK.map((lead, i) => (
-                <div key={i} style={{ padding: '12px 20px', borderBottom: i < LEADS_MOCK.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {leadsRecentes.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '.82rem' }}>Nenhum lead ainda.</div>
+              ) : leadsRecentes.map((lead, i) => (
+                <div key={lead.id || i} style={{ padding: '12px 20px', borderBottom: i < leadsRecentes.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '.82rem' }}>{lead.nome}</div>
                     <div style={{ fontSize: '.72rem', color: '#94a3b8' }}>{lead.loja}</div>

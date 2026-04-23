@@ -99,9 +99,7 @@ function NotifDropdown({ loja, onNotif }) {
 }
 
 export default function AdminLojas() {
-  const [lojas, setLojas] = useState(
-    LOJAS.map(l => ({ ...l, status: 'ativo', plano: 'vizinho', categoria_slug: l.categoria.slug }))
-  )
+  const [lojas, setLojas] = useState([])
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [filtroPlano, setFiltroPlano]   = useState('todos')
   const [search, setSearch]             = useState('')

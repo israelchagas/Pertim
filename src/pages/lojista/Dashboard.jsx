@@ -17,13 +17,13 @@ const PLANOS = [
     cor: 'var(--green)', corTexto: 'white',
     destaque: true,
     items: ['Tudo do Vizinho', 'Destaque nos resultados', 'Produtos ilimitados', 'Estatísticas avançadas', 'Suporte prioritário'],
-    acao: `https://wa.me/55${ADMIN_WA}?text=Quero+assinar+o+Plano+Aberto+do+Pertim`,
+    acao: `https://wa.me/${ADMIN_WA}?text=Quero+assinar+o+Plano+Aberto+do+Pertim`,
   },
   {
     slug: 'radar', nome: 'Radar', preco: 'R$79/mês',
     cor: 'var(--navy)', corTexto: 'white',
     items: ['Tudo do Aberto', 'Banner na tela inicial', 'Notificações push aos moradores', 'Relatórios semanais por WhatsApp'],
-    acao: `https://wa.me/55${ADMIN_WA}?text=Quero+assinar+o+Plano+Radar+do+Pertim`,
+    acao: `https://wa.me/${ADMIN_WA}?text=Quero+assinar+o+Plano+Radar+do+Pertim`,
   },
 ]
 
