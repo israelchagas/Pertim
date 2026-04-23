@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Pertim — Cadastro de Campo</title>
+  <style>
+    :root {
+      --green: #1DB954;
+      --navy: #0D1B2A;
+      --amber: #F5A623;
+      --red: #E53E3E;
+      --gray: #F7F8FA;
+      --border: #DDE1E9;
+      --text: #1A202C;
+      --muted: #6B7280;
+      --radius: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--gray);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* HEADER */
+    .app-header {
+      background: var(--navy);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .app-header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .app-header span {
+      font-size: 12px;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 57px;
+      z-index: 99;
+    }
+    .tab {
+      flex: 1;
+      padding: 14px 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: var(--navy);
+      border-bottom-color: var(--green);
+    }
+
+    /* PANELS */
+    .panel { display: none; padding: 20px 16px; }
+    .panel.active { display: block; }
+
+    /* FORM */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin: 24px 0 12px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    .field {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    label .required {
+      color: var(--red);
+      margin-left: 2px;
+    }
+    label .hint {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: 4px;
+    }
+
+    input[type="text"],
+    input[type="tel"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-family: var(--font);
+      background: white;
+      color: var(--text);
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--green);
+    }
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    /* RADIO / CHECKBOX GROUP */
+    .options-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .option-item:has(input:checked) {
+      border-color: var(--green);
+      background: #F0FFF6;
+    }
+    .option-item input[type="radio"],
+    .option-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+      flex-shrink: 0;
+    }
+    .option-item span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .option-item .emoji {
+      font-size: 18px;
+    }
+
+    /* STATUS BADGE */
+    .status-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .status-card {
+      padding: 14px 12px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    .status-card input { display: none; }
+    .status-card .icon { font-size: 22px; margin-bottom: 4px; }
+    .status-card .label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .status-card.green:has(input:checked) { border-color: var(--green); background: #F0FFF6; }
+    .status-card.green:has(input:checked) .label { color: var(--green); }
+    .status-card.amber:has(input:checked) { border-color: var(--amber); background: #FFFBEB; }
+    .status-card.amber:has(input:checked) .label { color: var(--amber); }
+    .status-card.red:has(input:checked) { border-color: var(--red); background: #FFF5F5; }
+    .status-card.red:has(input:checked) .label { color: var(--red); }
+    .status-card.navy:has(input:checked) { border-color: var(--navy); background: #F0F4F8; }
+    .status-card.navy:has(input:checked) .label { color: var(--navy); }
+
+    /* PHOTO UPLOAD */
+    .photo-upload {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .photo-upload:hover { border-color: var(--green); }
+    .photo-upload input { display: none; }
+    .photo-upload .icon { font-size: 32px; margin-bottom: 8px; }
+    .photo-upload p { font-size: 14px; color: var(--muted); font-weight: 500; }
+    .photo-upload p strong { color: var(--text); }
+    #photo-preview {
+      display: none;
+      margin-top: 12px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #photo-preview img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+
+    /* SUBMIT BUTTON */
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: opacity 0.2s;
+      letter-spacing: -0.2px;
+    }
+    .btn-submit:active { opacity: 0.85; }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--navy);
+      color: white;
+      padding: 14px 24px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* LISTA */
+    .lista-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .lista-header h2 { font-size: 16px; font-weight: 700; }
+    .btn-export {
+      padding: 8px 14px;
+      background: var(--navy);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-clear {
+      padding: 8px 14px;
+      background: transparent;
+      color: var(--red);
+      border: 1.5px solid var(--red);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .count-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .count-card {
+      background: white;
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+      border: 1.5px solid var(--border);
+    }
+    .count-card .num {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .count-card .lbl {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .count-card.green .num { color: var(--green); }
+    .count-card.amber .num { color: var(--amber); }
+    .count-card.red .num { color: var(--red); }
+    .count-card.navy .num { color: var(--navy); }
+
+    .loja-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--border);
+    }
+    .loja-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .loja-card-header h3 { font-size: 15px; font-weight: 700; }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .badge.cadastrado { background: #F0FFF6; color: var(--green); }
+    .badge.interessado { background: #FFFBEB; color: var(--amber); }
+    .badge.recusou { background: #FFF5F5; color: var(--red); }
+    .badge.ausente { background: #F0F4F8; color: var(--navy); }
+
+    .loja-info { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .loja-info strong { color: var(--text); }
+    .loja-frase {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--gray);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text);
+      font-style: italic;
+      border-left: 3px solid var(--green);
+    }
+    .loja-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 0 0 8px;
+      line-height: 1;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>Pertim · Campo</h1>
+  <span id="header-count">0 cadastros</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('form')">+ Novo</div>
+  <div class="tab" onclick="switchTab('lista')">Lista</div>
+</div>
+
+<!-- FORMULÁRIO -->
+<div class="panel active" id="panel-form">
+
+  <p class="section-label">Identificação</p>
+
+  <div class="field">
+    <label>Nome da loja <span class="required">*</span></label>
+    <input type="text" id="nome" placeholder="Ex: Padaria Central" autocomplete="off" />
+  </div>
+
+  <div class="field">
+    <label>Nome do dono / responsável</label>
+    <input type="text" id="dono" placeholder="Ex: Dona Neusa" autocomplete="off" />
+  </div>
+
+  <div class="field">
+    <label>Categoria <span class="required">*</span></label>
+    <select id="categoria">
+      <option value="">Selecione...</option>
+      <option>🍞 Padaria / Panificadora</option>
+      <option>🥩 Açougue</option>
+      <option>💊 Farmácia independente</option>
+      <option>🥦 Hortifruti / Sacolão</option>
+      <option>🛒 Mercadinho / Mercearia</option>
+      <option>🔧 Ferragens / Construção</option>
+      <option>✂️ Barbearia / Salão</option>
+      <option>🎂 Boleira / Confeiteira artesanal</option>
+      <option>🍱 Marmiteira / Salgadeira</option>
+      <option>🐾 Pet shop</option>
+      <option>🧵 Costureira / Alfaiate</option>
+      <option>🏪 Outro</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>WhatsApp de atendimento <span class="required">*</span></label>
+    <input type="tel" id="whatsapp" placeholder="61 9 0000-0000" />
+  </div>
+
+  <div class="field">
+    <label>Horário de funcionamento</label>
+    <input type="text" id="horario" placeholder="Ex: Seg–Sáb, 7h às 20h" autocomplete="off" />
+  </div>
+
+  <p class="section-label">Status da visita</p>
+
+  <div class="status-group">
+    <label class="status-card green">
+      <input type="radio" name="status" value="Cadastrado ✅" checked />
+      <div class="icon">✅</div>
+      <div class="label">Cadastrado</div>
+    </label>
+    <label class="status-card amber">
+      <input type="radio" name="status" value="Interessado ⏳" />
+      <div class="icon">⏳</div>
+      <div class="label">Voltar depois</div>
+    </label>
+    <label class="status-card red">
+      <input type="radio" name="status" value="Recusou ❌" />
+      <div class="icon">❌</div>
+      <div class="label">Recusou</div>
+    </label>
+    <label class="status-card navy">
+      <input type="radio" name="status" value="Dono ausente 🚪" />
+      <div class="icon">🚪</div>
+      <div class="label">Dono ausente</div>
+    </label>
+  </div>
+
+  <p class="section-label">Insights da conversa</p>
+
+  <div class="field">
+    <label>Frase exata que ele disse <span class="hint">— anote como ele falou, não seu resumo</span></label>
+    <textarea id="frase" placeholder="Ex: &quot;A vizinhança não sabe que tenho isso aqui&quot;"></textarea>
+  </div>
+
+  <div class="field">
+    <label>Objeção principal</label>
+    <div class="options-group">
+      <label class="option-item">
+        <input type="radio" name="objecao" value="Sem tempo pra atualizar" />
+        <span>Sem tempo pra atualizar</span>
+      </label>
+      <label class="option-item">
+        <input type="radio" name="objecao" value="Medo de não conseguir atender" />
+        <span>Medo de não conseguir atender</span>
+      </label>
+      <label class="option-item">
+        <input type="radio" name="objecao" value="Achou que era delivery" />
+        <span>Achou que era delivery</span>
+      </label>
+      <label class="option-item">
+        <input type="radio" name="objecao" value="Não tem interesse agora" />
+        <span>Não tem interesse agora</span>
+      </label>
+      <label class="option-item">
+        <input type="radio" name="objecao" value="Nenhuma" />
+        <span>Nenhuma objeção</span>
+      </label>
+      <label class="option-item">
+        <input type="radio" name="objecao" value="Outra" />
+        <span>Outra — descrevo nas observações</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Ele indicou outro comércio?</label>
+    <input type="text" id="indicacao" placeholder="Nome + referência do lugar" autocomplete="off" />
+  </div>
+
+  <p class="section-label">Foto da fachada</p>
+
+  <div class="photo-upload" onclick="document.getElementById('foto-input').click()">
+    <input type="file" id="foto-input" accept="image/*" capture="environment" onchange="previewFoto(event)" />
+    <div class="icon">📷</div>
+    <p><strong>Tirar foto agora</strong><br />ou escolher da galeria</p>
+  </div>
+  <div id="photo-preview">
+    <img id="foto-img" src="" alt="Foto da fachada" />
+  </div>
+
+  <div class="field" style="margin-top:20px">
+    <label>Observações livres</label>
+    <textarea id="obs" placeholder="Qualquer detalhe relevante..."></textarea>
+  </div>
+
+  <button class="btn-submit" onclick="salvar()">💾 Salvar e próxima loja</button>
+
+</div>
+
+<!-- LISTA -->
+<div class="panel" id="panel-lista">
+
+  <div class="lista-header">
+    <h2>Lojas visitadas</h2>
+    <div class="btn-row">
+      <button class="btn-export" onclick="exportarCSV()">⬇ CSV</button>
+      <button class="btn-clear" onclick="limparTudo()">Limpar</button>
+    </div>
+  </div>
+
+  <div class="count-bar">
+    <div class="count-card green">
+      <div class="num" id="count-cadastrado">0</div>
+      <div class="lbl">Cadastradas</div>
+    </div>
+    <div class="count-card amber">
+      <div class="num" id="count-interessado">0</div>
+      <div class="lbl">Voltar depois</div>
+    </div>
+    <div class="count-card red">
+      <div class="num" id="count-recusou">0</div>
+      <div class="lbl">Recusaram</div>
+    </div>
+    <div class="count-card navy">
+      <div class="num" id="count-ausente">0</div>
+      <div class="lbl">Ausentes</div>
+    </div>
+  </div>
+
+  <div id="lista-container"></div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Persistência ──────────────────────────────────────────────
+  function getLojas() {
+    return JSON.parse(localStorage.getItem('pertim_lojas') || '[]');
+  }
+  function saveLojas(arr) {
+    localStorage.setItem('pertim_lojas', JSON.stringify(arr));
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'form') || (i === 1 && tab === 'lista'));
+    });
+    document.getElementById('panel-form').classList.toggle('active', tab === 'form');
+    document.getElementById('panel-lista').classList.toggle('active', tab === 'lista');
+    if (tab === 'lista') renderLista();
+  }
+
+  // ── Foto preview ─────────────────────────────────────────────
+  let fotoBase64 = '';
+  function previewFoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      fotoBase64 = ev.target.result;
+      document.getElementById('foto-img').src = fotoBase64;
+      document.getElementById('photo-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Salvar ────────────────────────────────────────────────────
+  function salvar() {
+    const nome = document.getElementById('nome').value.trim();
+    const whatsapp = document.getElementById('whatsapp').value.trim();
+    const categoria = document.getElementById('categoria').value;
+
+    if (!nome) { showToast('⚠️ Informe o nome da loja'); return; }
+    if (!whatsapp) { showToast('⚠️ Informe o WhatsApp'); return; }
+    if (!categoria) { showToast('⚠️ Selecione a categoria'); return; }
+
+    const statusEl = document.querySelector('input[name="status"]:checked');
+    const objecaoEl = document.querySelector('input[name="objecao"]:checked');
+
+    const loja = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleString('pt-BR'),
+      nome,
+      dono: document.getElementById('dono').value.trim(),
+      categoria,
+      whatsapp,
+      horario: document.getElementById('horario').value.trim(),
+      status: statusEl ? statusEl.value : '—',
+      frase: document.getElementById('frase').value.trim(),
+      objecao: objecaoEl ? objecaoEl.value : '—',
+      indicacao: document.getElementById('indicacao').value.trim(),
+      obs: document.getElementById('obs').value.trim(),
+      foto: fotoBase64,
+    };
+
+    const lojas = getLojas();
+    lojas.unshift(loja);
+    saveLojas(lojas);
+    atualizarContador();
+    resetForm();
+    showToast('✅ ' + nome + ' salva!');
+  }
+
+  // ── Reset form ────────────────────────────────────────────────
+  function resetForm() {
+    ['nome','dono','whatsapp','horario','frase','indicacao','obs'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('categoria').value = '';
+    document.querySelector('input[name="status"][value="Cadastrado ✅"]').checked = true;
+    const ob = document.querySelector('input[name="objecao"]:checked');
+    if (ob) ob.checked = false;
+    fotoBase64 = '';
+    document.getElementById('foto-img').src = '';
+    document.getElementById('photo-preview').style.display = 'none';
+    document.getElementById('foto-input').value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('nome').focus();
+  }
+
+  // ── Render lista ──────────────────────────────────────────────
+  function renderLista() {
+    const lojas = getLojas();
+    const container = document.getElementById('lista-container');
+
+    const counts = { cadastrado: 0, interessado: 0, recusou: 0, ausente: 0 };
+    lojas.forEach(l => {
+      if (l.status.includes('Cadastrado')) counts.cadastrado++;
+      else if (l.status.includes('Interessado')) counts.interessado++;
+      else if (l.status.includes('Recusou')) counts.recusou++;
+      else if (l.status.includes('ausente')) counts.ausente++;
+    });
+    document.getElementById('count-cadastrado').textContent = counts.cadastrado;
+    document.getElementById('count-interessado').textContent = counts.interessado;
+    document.getElementById('count-recusou').textContent = counts.recusou;
+    document.getElementById('count-ausente').textContent = counts.ausente;
+
+    if (!lojas.length) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">🗺️</div><p>Nenhuma loja cadastrada ainda.<br/>Comece pela primeira visita!</p></div>`;
+      return;
+    }
+
+    container.innerHTML = lojas.map(l => {
+      const badgeClass = l.status.includes('Cadastrado') ? 'cadastrado'
+        : l.status.includes('Interessado') ? 'interessado'
+        : l.status.includes('Recusou') ? 'recusou' : 'ausente';
+
+      return `
+        <div class="loja-card">
+          <div class="loja-card-header">
+            <div>
+              <h3>${l.nome}</h3>
+              <div class="loja-info">${l.categoria || '—'}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="badge ${badgeClass}">${l.status.split(' ')[0]}</span>
+              <button class="loja-delete" onclick="deletar(${l.id})">×</button>
+            </div>
+          </div>
+          ${l.dono ? `<div class="loja-info">👤 <strong>${l.dono}</strong></div>` : ''}
+          ${l.whatsapp ? `<div class="loja-info">📱 ${l.whatsapp}</div>` : ''}
+          ${l.horario ? `<div class="loja-info">🕐 ${l.horario}</div>` : ''}
+          ${l.indicacao ? `<div class="loja-info">🔗 Indicou: <strong>${l.indicacao}</strong></div>` : ''}
+          ${l.objecao && l.objecao !== '—' && l.objecao !== 'Nenhuma' ? `<div class="loja-info">⚠️ Objeção: ${l.objecao}</div>` : ''}
+          ${l.frase ? `<div class="loja-frase">"${l.frase}"</div>` : ''}
+          ${l.obs ? `<div class="loja-info" style="margin-top:8px">📝 ${l.obs}</div>` : ''}
+          <div class="loja-info" style="margin-top:8px;font-size:11px;color:#aaa">${l.timestamp}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Deletar ───────────────────────────────────────────────────
+  function deletar(id) {
+    if (!confirm('Remover esta loja?')) return;
+    const lojas = getLojas().filter(l => l.id !== id);
+    saveLojas(lojas);
+    renderLista();
+    atualizarContador();
+  }
+
+  // ── Limpar tudo ───────────────────────────────────────────────
+  function limparTudo() {
+    if (!confirm('Apagar todos os registros? Essa ação não pode ser desfeita.')) return;
+    localStorage.removeItem('pertim_lojas');
+    renderLista();
+    atualizarContador();
+  }
+
+  // ── Exportar CSV ──────────────────────────────────────────────
+  function exportarCSV() {
+    const lojas = getLojas();
+    if (!lojas.length) { showToast('Nenhuma loja para exportar'); return; }
+
+    const cols = ['timestamp','nome','dono','categoria','whatsapp','horario','status','objecao','frase','indicacao','obs'];
+    const header = cols.join(';');
+    const rows = lojas.map(l =>
+      cols.map(c => `"${(l[c] || '').toString().replace(/"/g, '""')}"`).join(';')
+    );
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pertim_campo_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('⬇ CSV exportado!');
+  }
+
+  // ── Contador header ───────────────────────────────────────────
+  function atualizarContador() {
+    const n = getLojas().length;
+    document.getElementById('header-count').textContent = n + (n === 1 ? ' cadastro' : ' cadastros');
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  atualizarContador();
+</script>
+</body>
+</html>
