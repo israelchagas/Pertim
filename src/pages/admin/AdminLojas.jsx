@@ -233,12 +233,17 @@ export default function AdminLojas() {
 
     setEnviando(true)
     try {
-      const res = await fetch('/.netlify/functions/notificar-lojista', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, canal, email, whatsapp: wpp, nome, nomeLoja }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Erro ao enviar')
+      let res, data
+      try {
+        res  = await fetch('/.netlify/functions/notificar-lojista', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo, canal, email, whatsapp: wpp, nome, nomeLoja }),
+        })
+        data = await res.json().catch(() => ({}))
+      } catch (netErr) {
+        throw new Error(`Função indisponível — verifique o deploy da Netlify (${netErr.message})`)
+      }
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
 
       const labels = { boasVindas: 'boas-vindas', aprovacao: 'aprovação', lembrete: 'lembrete' }
       const canalLabel = canal === 'email' ? '📧 E-mail' : '💬 WhatsApp'
