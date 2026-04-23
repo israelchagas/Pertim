@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, Pencil, Trash2, Search, CheckCircle, XCircle, ToggleLeft, ToggleRight, X, Mail, MessageCircle, ChevronDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { LOJAS } from '../../lib/mockData'
 
 const CATEGORIAS = [
   { slug: 'mercado',   emoji: '🛒', nome: 'Mercado / Mercearia' },
