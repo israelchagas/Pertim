@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, Pencil, Trash2, Search, CheckCircle, XCircle, ToggleLeft, ToggleRight, X, Mail, MessageCircle, ChevronDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { LOJAS } from '../../lib/mockData'
@@ -45,9 +45,10 @@ function Modal({ titulo, onClose, children }) {
   )
 }
 
-/* ─── Dropdown de notificações ─── */
+/* ─── Dropdown de notificações (fixed — não fica cortado pelo overflow da tabela) ─── */
 function NotifDropdown({ loja, onNotif }) {
-  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState(null)
+  const btnRef = useRef(null)
 
   const opcoes = [
     { tipo: 'boasVindas', canal: 'email',    label: '📧 E-mail de boas-vindas' },
@@ -58,27 +59,33 @@ function NotifDropdown({ loja, onNotif }) {
     { tipo: 'lembrete',   canal: 'whatsapp', label: '💬 WhatsApp lembrete' },
   ]
 
+  const open = () => {
+    const rect = btnRef.current.getBoundingClientRect()
+    setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+  }
+  const close = () => setPos(null)
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        className="admin-action-btn"
-        onClick={() => setOpen(o => !o)}
-        title="Notificações"
-        style={{ display: 'flex', alignItems: 'center', gap: 3 }}
-      >
+    <span style={{ display: 'inline-block' }}>
+      <button ref={btnRef} className="admin-action-btn" onClick={open} title="Notificações"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
         <Mail size={12} /><ChevronDown size={10} />
       </button>
-      {open && (
+      {pos && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setOpen(false)} />
-          <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 100, minWidth: 220, overflow: 'hidden' }}>
-            <div style={{ padding: '8px 14px', fontSize: '.7rem', fontWeight: 700, color: '#94a3b8', borderBottom: '1px solid #f1f5f9', textTransform: 'uppercase', letterSpacing: '.05em' }}>
-              Notificar lojista
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1999 }} onClick={close} />
+          <div style={{
+            position: 'fixed', top: pos.top, right: pos.right,
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+            boxShadow: '0 8px 32px rgba(0,0,0,.18)', zIndex: 2000, minWidth: 230, overflow: 'hidden',
+          }}>
+            <div style={{ padding: '9px 14px', fontSize: '.7rem', fontWeight: 700, color: '#94a3b8', borderBottom: '1px solid #f1f5f9', textTransform: 'uppercase', letterSpacing: '.05em', background: '#f8fafc' }}>
+              Notificar — {loja.nome}
             </div>
             {opcoes.map((op, i) => (
-              <button key={i} onClick={() => { setOpen(false); onNotif(op.tipo, op.canal) }}
-                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '.82rem', color: '#334155', borderBottom: i < opcoes.length - 1 ? '1px solid #f8fafc' : 'none' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+              <button key={i} onClick={() => { close(); onNotif(op.tipo, op.canal) }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '11px 16px', background: 'none', border: 'none', borderBottom: i < opcoes.length - 1 ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', fontSize: '.84rem', fontWeight: 500, color: '#1e293b' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
               >
                 {op.label}
@@ -87,7 +94,7 @@ function NotifDropdown({ loja, onNotif }) {
           </div>
         </>
       )}
-    </div>
+    </span>
   )
 }
 
