@@ -2,14 +2,6 @@ import { useState, useEffect } from 'react'
 import { MessageCircle, UserCheck, X, Search, Download } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
-const LEADS_MOCK = [
-  { id: '1', nome: 'Carlos Eduardo', loja: 'Mercadinho do Carlos', whatsapp: '61999881234', tipo: 'Mercearia / Mercadinho', status: 'novo', created_at: '2026-04-20', bairro: 'Riacho Fundo 1' },
-  { id: '2', nome: 'Marcia Santos', loja: 'Salão da Marcia', whatsapp: '61999112233', tipo: 'Beleza / Estética', status: 'contatado', created_at: '2026-04-19', bairro: 'Riacho Fundo 1' },
-  { id: '3', nome: 'João Ferreira', loja: 'Ferragens do João', whatsapp: '61999445566', tipo: 'Ferragens / Material', status: 'novo', created_at: '2026-04-20', bairro: 'Riacho Fundo 1' },
-  { id: '4', nome: 'Ana Paula Lima', loja: 'Doceria Ana', whatsapp: '61999778899', tipo: 'Padaria / Confeitaria', status: 'ativo', created_at: '2026-04-15', bairro: 'Riacho Fundo 1' },
-  { id: '5', nome: 'Pedro Oliveira', loja: 'Hortifruti do Pedro', whatsapp: '61998765432', tipo: 'Hortifruti', status: 'novo', created_at: '2026-04-20', bairro: 'Riacho Fundo 1' },
-]
-
 const STATUS_STYLES = {
   novo:       { bg: '#dbeafe', color: '#1d4ed8', label: 'Novo' },
   contatado:  { bg: '#fef3c7', color: '#d97706', label: 'Contatado' },
@@ -18,7 +10,7 @@ const STATUS_STYLES = {
 }
 
 export default function AdminLeads() {
-  const [leads, setLeads] = useState(LEADS_MOCK)
+  const [leads, setLeads] = useState([])
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState('')
